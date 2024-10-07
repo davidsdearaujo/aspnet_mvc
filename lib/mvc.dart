@@ -8,10 +8,6 @@ class _Empty implements IAction {
   const _Empty();
 }
 
-class LastView implements IAction {
-  const LastView();
-}
-
 abstract class ViewMvc<TModel, TController extends Controller> implements IAction {
   final TModel model;
   const ViewMvc(this.model);
@@ -27,6 +23,11 @@ class RedirectTo implements IAction {
 class PushRoute implements IAction {
   final String route;
   const PushRoute(this.route);
+}
+
+class ShowSnackBar implements IAction {
+  final SnackBar snackBar;
+  const ShowSnackBar(this.snackBar);
 }
 
 abstract class Controller extends ValueNotifier<IAction> {
@@ -75,7 +76,7 @@ class _ControllerHandlerState extends State<ControllerHandler> {
   void initState() {
     super.initState();
     widget.controller.addListener(_controllerListener);
-    handleRoute(widget.route);
+    RouteHandler(widget.controller).handle(widget.route);
   }
 
   @override
@@ -103,28 +104,6 @@ class _ControllerHandlerState extends State<ControllerHandler> {
     );
   }
 
-  Future<void> handleRoute(Function route) async {
-    //TODO: Inject model in the parameters when it's needed.
-    final classData = route.reflection();
-    if (classData.className == 'Stream') {
-      final Stream<IAction> stream = Function.apply(route, null);
-      await for (IAction emitedAction in stream) {
-        widget.controller.value = emitedAction;
-      }
-    } else if (classData.className == 'Future') {
-      try {
-        final Future<IAction> actionFuture = Function.apply(route, null);
-        final action = await actionFuture;
-        widget.controller.value = action;
-      } catch (ex, stack) {
-        print('ERROR!!!!! $ex');
-      }
-    } else if (classData.className == 'IAction') {
-      final IAction action = Function.apply(route, null);
-      widget.controller.value = action;
-    }
-  }
-
   void _controllerListener() {
     switch (widget.controller.value) {
       case RedirectTo redirect:
@@ -133,9 +112,53 @@ class _ControllerHandlerState extends State<ControllerHandler> {
       case PushRoute push:
         Navigator.of(context, rootNavigator: true).pushNamed(push.route);
         break;
+      case ShowSnackBar params:
+        ScaffoldMessenger.of(context).showSnackBar(params.snackBar);
+        break;
       default:
         break;
     }
+  }
+}
+
+class RouteHandler {
+  final Controller _controller;
+  const RouteHandler(this._controller);
+
+  Future<void> handle(Function route) async {
+    final classData = route.reflection();
+    final params = handleParams(classData);
+
+    if (classData.className == 'Stream') {
+      final Stream<IAction> stream = Function.apply(route, params);
+      await for (IAction emitedAction in stream) {
+        _controller.value = emitedAction;
+      }
+    } else if (classData.className == 'Future') {
+      try {
+        final Future<IAction> actionFuture = Function.apply(route, params);
+        final action = await actionFuture;
+        _controller.value = action;
+        // ignore: unused_catch_stack
+      } catch (ex, stack) {
+        print('ERROR!!!!! $ex');
+      }
+    } else if (classData.className == 'IAction') {
+      final IAction action = Function.apply(route, params);
+      _controller.value = action;
+    }
+  }
+
+  List handleParams(ClassData classData) {
+    final response = [];
+    if (classData.positionalParams.isNotEmpty) {
+      for (var param in classData.positionalParams) {
+        if (param.type == '${_controller.lastModel.runtimeType}' || (param.nullable && _controller.lastModel == null)) {
+          response.add(_controller.lastModel);
+        }
+      }
+    }
+    return response;
   }
 }
 

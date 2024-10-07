@@ -1,7 +1,4 @@
-import 'package:mvc_poc/mvc.dart';
-import 'package:mvc_poc/src/counter_view.dart';
-
-import 'counter_model.dart';
+part of 'counter.dart';
 
 class CounterController extends Controller {
   @override
@@ -9,7 +6,7 @@ class CounterController extends Controller {
     '/': counter,
   };
 
-  final data = CounterData();
+  final data = Datasource();
 
   Stream<IAction> counter() async* {
     yield CounterView(const CounterModel.loading());
@@ -17,38 +14,17 @@ class CounterController extends Controller {
     yield CounterView(CounterModel.fetched(count));
   }
 
-  Future<void> onIncrementTap() async {
-    await for (IAction action in increment(lastModel)) {
-      value = action;
+  void onIncrementTap() => RouteHandler(this).handle(increment);
+
+  Stream<IAction> increment(CounterModel? model) async* {
+    try {
+      yield CounterView(CounterModel.loading(model?.count));
+      final count = await data.increment();
+      yield CounterView(CounterModel.fetched(count));
+      // ignore: unused_catch_stack
+    } catch (ex, stack) {
+      yield ShowSnackBar(SnackBar(content: Text('Something went wrong: $ex')));
+      yield CounterView(model ?? const CounterModel.empty());
     }
-  }
-
-  Stream<IAction> increment(CounterModel model) async* {
-    yield CounterView(CounterModel.loading(model.count));
-    final count = await data.increment();
-    yield CounterView(CounterModel.fetched(count));
-  }
-}
-
-abstract class CounterData {
-  factory CounterData() = CounterDataImpl;
-  Future<int> getTapsCount();
-  Future<int> increment();
-}
-
-class CounterDataImpl implements CounterData {
-  int tapsCount = 0;
-
-  @override
-  Future<int> getTapsCount() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return tapsCount;
-  }
-
-  @override
-  Future<int> increment() async {
-    await Future.delayed(const Duration(seconds: 2));
-    tapsCount++;
-    return tapsCount;
   }
 }

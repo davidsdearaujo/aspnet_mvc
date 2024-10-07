@@ -1,8 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:mvc_poc/mvc.dart';
-
-import 'counter_controller.dart';
-import 'counter_model.dart';
+part of 'counter.dart';
 
 class CounterView extends ViewMvc<CounterModel, CounterController> {
   CounterView(super.model);
@@ -16,6 +12,7 @@ class CounterView extends ViewMvc<CounterModel, CounterController> {
 class _CounterView extends StatelessWidget {
   final CounterController controller;
   final CounterModel model;
+  // ignore: unused_element
   const _CounterView({super.key, required this.controller, required this.model});
 
   @override

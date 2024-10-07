@@ -6,6 +6,7 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:fake_reflection/fake_reflection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -21,9 +22,8 @@ void main() {
     if (data.className == 'Stream') {
       final Stream<int> stream = Function.apply(fn, null);
       await for (int emitedItem in stream) {
-        print(emitedItem);
+        debugPrint('$emitedItem');
       }
     }
-    // print(data);
   });
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:mvc_poc/src/counter_controller.dart';
 
 import 'mvc.dart';
+import 'src/counter.dart';
 
 void main() {
   runApp(const MyApp());
