@@ -33,3 +33,15 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
+
+class ShowSnackBarAction implements MvcAction {
+  final SnackBar snackBar;
+  const ShowSnackBarAction(this.snackBar);
+}
+
+final customHandlers = <ValidationCallback, ExecutionCallback>{
+  (action) => action is ShowSnackBarAction: (context, action) {
+    final params = action as ShowSnackBarAction;
+    ScaffoldMessenger.of(context).showSnackBar(params.snackBar);
+  },
+};

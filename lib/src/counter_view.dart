@@ -20,7 +20,7 @@ class _CounterView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Counter')),
       floatingActionButton: FloatingActionButton(
-        onPressed: model.isLoading ? null : controller.onIncrementTap,
+        onPressed: model.isLoading ? null : controller.run(controller.increment),
         child: model.isLoading
             ? const Center(
                 child: SizedBox.square(

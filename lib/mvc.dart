@@ -2,42 +2,40 @@ import 'package:fake_reflection/fake_reflection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-sealed class IAction {}
+abstract class MvcAction {}
 
-class _Empty implements IAction {
-  const _Empty();
+class _NoAction implements MvcAction {
+  const _NoAction();
 }
 
-abstract class ViewMvc<TModel, TController extends Controller> implements IAction {
+abstract class ViewMvc<TModel, TController extends MvcController> implements MvcAction {
   final TModel model;
   const ViewMvc(this.model);
 
   Widget build(TController controller);
 }
 
-class RedirectTo implements IAction {
+class RedirectTo implements MvcAction {
   final String route;
   const RedirectTo(this.route);
 }
 
-class PushRoute implements IAction {
+class PushRoute implements MvcAction {
   final String route;
   const PushRoute(this.route);
 }
 
-class ShowSnackBar implements IAction {
-  final SnackBar snackBar;
-  const ShowSnackBar(this.snackBar);
-}
-
-abstract class Controller extends ValueNotifier<IAction> {
-  Controller() : super(const _Empty());
+abstract class MvcController extends ValueNotifier<MvcAction> {
+  MvcController() : super(const _NoAction());
   Map<String, Function> get routes;
+
+  late final _functionHandler = FunctionHandler(this);
+  void Function() run(Function fn) => () => _functionHandler.handleFunction(fn);
 
   dynamic lastModel;
 
   @override
-  set value(IAction newValue) {
+  set value(MvcAction newValue) {
     if (newValue is ViewMvc) {
       lastModel = newValue.model;
     }
@@ -45,7 +43,7 @@ abstract class Controller extends ValueNotifier<IAction> {
   }
 }
 
-class ControllerRoutes<TController extends Controller> {
+class ControllerRoutes<TController extends MvcController> {
   final TController controller;
   ControllerRoutes(this.controller);
 
@@ -60,10 +58,14 @@ class ControllerRoutes<TController extends Controller> {
   }
 }
 
-class ControllerHandler<TController extends Controller> extends StatefulWidget {
+typedef ValidationCallback = bool Function(Object action);
+typedef ExecutionCallback = void Function(BuildContext context, Object action);
+
+class ControllerHandler<TController extends MvcController> extends StatefulWidget {
   final TController controller;
   final Function route;
-  const ControllerHandler(this.controller, this.route, {super.key});
+  final Map<ValidationCallback, ExecutionCallback> customHandlers;
+  const ControllerHandler(this.controller, this.route, {super.key, this.customHandlers = const {}});
 
   @override
   State<ControllerHandler> createState() => _ControllerHandlerState();
@@ -76,7 +78,7 @@ class _ControllerHandlerState extends State<ControllerHandler> {
   void initState() {
     super.initState();
     widget.controller.addListener(_controllerListener);
-    RouteHandler(widget.controller).handle(widget.route);
+    widget.controller.run(widget.route).call();
   }
 
   @override
@@ -112,31 +114,33 @@ class _ControllerHandlerState extends State<ControllerHandler> {
       case PushRoute push:
         Navigator.of(context, rootNavigator: true).pushNamed(push.route);
         break;
-      case ShowSnackBar params:
-        ScaffoldMessenger.of(context).showSnackBar(params.snackBar);
-        break;
       default:
+        for (final MapEntry(key: validate, value: execute) in widget.customHandlers.entries) {
+          if (validate(widget.controller.value)) {
+            execute(context, widget.controller.value);
+          }
+        }
         break;
     }
   }
 }
 
-class RouteHandler {
-  final Controller _controller;
-  const RouteHandler(this._controller);
+class FunctionHandler {
+  final MvcController _controller;
+  const FunctionHandler(this._controller);
 
-  Future<void> handle(Function route) async {
+  Future<void> handleFunction(Function route) async {
     final classData = route.reflection();
     final params = handleParams(classData);
 
     if (classData.className == 'Stream') {
-      final Stream<IAction> stream = Function.apply(route, params);
-      await for (IAction emitedAction in stream) {
+      final Stream<MvcAction> stream = Function.apply(route, params);
+      await for (MvcAction emitedAction in stream) {
         _controller.value = emitedAction;
       }
     } else if (classData.className == 'Future') {
       try {
-        final Future<IAction> actionFuture = Function.apply(route, params);
+        final Future<MvcAction> actionFuture = Function.apply(route, params);
         final action = await actionFuture;
         _controller.value = action;
         // ignore: unused_catch_stack
@@ -144,7 +148,7 @@ class RouteHandler {
         print('ERROR!!!!! $ex');
       }
     } else if (classData.className == 'IAction') {
-      final IAction action = Function.apply(route, params);
+      final MvcAction action = Function.apply(route, params);
       _controller.value = action;
     }
   }

@@ -1,6 +1,6 @@
 part of 'counter.dart';
 
-class CounterController extends Controller {
+class CounterController extends MvcController {
   @override
   late Map<String, Function> routes = {
     '/': counter,
@@ -8,22 +8,20 @@ class CounterController extends Controller {
 
   final data = Datasource();
 
-  Stream<IAction> counter() async* {
+  Stream<MvcAction> counter() async* {
     yield CounterView(const CounterModel.loading());
     final count = await data.getTapsCount();
     yield CounterView(CounterModel.fetched(count));
   }
 
-  void onIncrementTap() => RouteHandler(this).handle(increment);
-
-  Stream<IAction> increment(CounterModel? model) async* {
+  Stream<MvcAction> increment(CounterModel? model) async* {
     try {
       yield CounterView(CounterModel.loading(model?.count));
       final count = await data.increment();
       yield CounterView(CounterModel.fetched(count));
       // ignore: unused_catch_stack
     } catch (ex, stack) {
-      yield ShowSnackBar(SnackBar(content: Text('Something went wrong: $ex')));
+      yield ShowSnackBarAction(SnackBar(content: Text('Something went wrong: $ex')));
       yield CounterView(model ?? const CounterModel.empty());
     }
   }
