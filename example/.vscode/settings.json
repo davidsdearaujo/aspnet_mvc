@@ -7,8 +7,7 @@
     "**/.fvm": true,
     ".dart_tool": true,
     "coverage": true,
-    "build": true,
-    "example": true
+    "build": true
   },
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
