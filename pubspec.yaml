@@ -1,7 +1,8 @@
 name: aspnet_mvc
 description: "A MVC structure based on ASP.NET MVC"
 version: 0.0.2
-homepage: 
+homepage: https://learn.microsoft.com/en-us/aspnet/core/mvc/overview?view=aspnetcore-8.0
+repository: https://github.com/davidsdearaujo/aspnet_mvc
 
 environment:
   sdk: ^3.5.2
